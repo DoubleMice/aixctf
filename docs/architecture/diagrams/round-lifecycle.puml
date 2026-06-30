@@ -1,0 +1,47 @@
+@startuml
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+title Round-Based AutoResearch Lifecycle
+
+participant "Runtime\nController" as Runtime
+participant "Loop Core" as Loop
+participant "Knowledge\nRouter" as Knowledge
+participant "Round\nManager" as Round
+participant "ClaudeCode\nChild Process" as Claude
+participant "Hooks" as Hooks
+participant "State Store" as State
+participant "Human Sync\nAgent" as Sync
+participant "Result\nCollector" as Result
+
+Runtime -> State : load_or_create state.json
+Runtime -> Loop : prepare_round(state)
+Loop -> Loop : select strategy
+Loop -> Knowledge : select docs
+Knowledge --> Loop : template + skill/tool/debug docs
+Loop --> Runtime : loop_plan
+
+Runtime -> Round : run_round(loop_plan)
+Round -> Claude : prompt(state, docs)\nwith child WORKDIR
+Claude -> Hooks : PreToolUse
+Hooks --> Claude : allow / deny
+Claude -> Hooks : PostToolUse
+Hooks -> State : candidate flags /\nevidence / failures
+Hooks --> Round : tool events
+Claude -> Hooks : native Task events
+Hooks --> Round : task result artifacts
+Round -> Round : reflect observation and evidence
+Round -> State : reload latest state.json
+Round -> State : apply round_result\nwithout losing hook updates
+Round -> Sync : flush round summary
+Runtime -> Runtime : terminal condition?
+
+alt solved or terminal condition reached
+  Runtime -> Result : write result.json
+else continue
+  Runtime -> Loop : next round
+end
+
+@enduml

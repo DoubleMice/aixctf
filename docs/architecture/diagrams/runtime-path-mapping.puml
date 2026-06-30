@@ -1,0 +1,69 @@
+@startuml runtime-path-mapping
+!theme plain
+
+title AIxCTF Runtime Path Mapping
+left to right direction
+
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+skinparam defaultFontName Helvetica
+skinparam rectangle {
+  RoundCorner 8
+}
+
+rectangle "Host checkout\n.../aixctf/.claude" as Host #F7F7F7 {
+  folder "sample_challenge/\nchallenge input" as HostChallenge #FFF4CC
+  folder "workspace/\npersisted workspaces" as HostWorkspace #E8F5E9
+  folder "workspace/<challenge_id>/\nhost-visible run state" as HostRun #D9F2D9
+  artifact "workspace/controller_result.json\nmulti-challenge summary" as HostController #FFFFFF
+  folder "local_output/\nexported results" as HostOutput #FCE4EC
+}
+
+node "Docker container\nimage built from .claude/" as Docker #EAF2FF {
+  folder "/challenge\nread-only input mount" as DockerChallenge #FFF4CC
+  rectangle "/aixctf-agent\nruntime code and docs\nruntime-owned" as AgentRoot #E3F2FD
+  folder "/aixctf-agent/workspace\nworkspace base" as DockerWorkspaceBase #E8F5E9
+  folder "/aixctf-agent/workspace/<challenge_id>\nper-child-process $WORKDIR\nand ClaudeCode cwd" as Workdir #D9F2D9
+  artifact "state.json\nrounds/\nevents/\nsubtasks/\nscripts/\nlogs/\nevidence/\nresult.json" as WorkdirArtifacts #FFFFFF
+  artifact "/aixctf-agent/workspace/controller_result.json\ncontroller summary" as DockerController #FFFFFF
+  folder "/output\noptional result export" as DockerOutput #FCE4EC
+  artifact "/output/<challenge_id>/result.json\nper-challenge result" as DockerChallengeResult #FFFFFF
+  artifact "/output/result.json\nsingle result or controller summary" as DockerSummary #FFFFFF
+}
+
+HostChallenge --> DockerChallenge : bind mount\nread-only
+HostWorkspace --> DockerWorkspaceBase : bind mount\nread-write
+HostRun <.. Workdir : same files\nvia workspace mount
+HostController <.. DockerController : same file\nvia workspace mount
+DockerOutput --> HostOutput : bind mount\nread-write
+
+DockerChallenge --> Workdir : ChallengeLoader copies\ninto challenge/
+AgentRoot --> Workdir : RuntimeController creates\nper-challenge layout
+AgentRoot --> Workdir : Claude child gets\nWORKDIR/CHALLENGE_ID env
+AgentRoot --> DockerController : RuntimeController writes\nmulti-challenge summary
+Workdir --> DockerChallengeResult : ResultCollector copies\nper-challenge result
+DockerController --> DockerSummary : RuntimeController copies\nsummary result
+Workdir --> WorkdirArtifacts
+
+note bottom of Workdir
+challenge_id resolution:
+1. CHALLENGE_ID
+2. metadata.json challenge_id
+3. metadata.json id
+4. challenge source name
+5. unknown
+end note
+
+note top of Workdir
+Multi-challenge mode may run several
+ClaudeCode child processes at once.
+Each child writes only to its own WORKDIR.
+end note
+
+note bottom of AgentRoot
+Solver agents should write only under $WORKDIR.
+/aixctf-agent is runtime-owned.
+end note
+
+@enduml

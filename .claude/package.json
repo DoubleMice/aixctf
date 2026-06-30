@@ -1,0 +1,12 @@
+{
+  "name": "aixctf-claudecode-agent-solver",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dockerized AIxCTF controller and round-loop solver runtime using ClaudeCode.",
+  "scripts": {
+    "dry-run": "AIXCTF_DRY_RUN=1 AIXCTF_MAX_ROUNDS=2 AIXCTF_MAX_ROUNDS_PER_VISIT=1 python3 entrypoint.py"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-code": "latest"
+  }
+}

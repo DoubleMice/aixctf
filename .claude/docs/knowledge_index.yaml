@@ -1,0 +1,99 @@
+skills:
+  - id: pwn.ret2win
+    file: docs/pwn/pwn_ret2win.md
+    category: pwn
+    phase: exploit
+    triggers: [win function, get_flag, no PIE, stack overflow, ret2win]
+  - id: pwn.stack_bof
+    file: docs/pwn/pwn_stack_bof.md
+    category: pwn
+    phase: hypothesis
+    triggers: [overflow, crash, cyclic, segmentation fault]
+  - id: pwn.ret2libc
+    file: docs/pwn/pwn_ret2libc.md
+    category: pwn
+    phase: exploit
+    triggers: [libc, puts, system, /bin/sh, leak]
+  - id: pwn.ctfwiki_rop
+    file: docs/pwn/ctfwiki_rop_strategy.md
+    category: pwn
+    phase: exploit
+    triggers: [ROP, ret2text, ret2shellcode, ret2syscall, ret2dlresolve, SROP, gadget]
+  - id: pwn.ctfwiki_fmtstr
+    file: docs/pwn/ctfwiki_fmtstr_strategy.md
+    category: pwn
+    phase: exploit
+    triggers: [format string, fmtstr, printf, "%n", "%p", "%s", positional]
+  - id: pwn.ctfwiki_heap
+    file: docs/pwn/ctfwiki_heap_strategy.md
+    category: pwn
+    phase: hypothesis
+    triggers: [heap, tcache, fastbin, unsorted bin, double free, UAF, use after free, off by one, unlink]
+  - id: web.ssti
+    file: docs/web/web_ssti.md
+    category: web
+    phase: exploit
+    triggers: ["{{7*7}}", template, Jinja2, SSTI]
+  - id: web.sqli
+    file: docs/web/web_sqli.md
+    category: web
+    phase: exploit
+    triggers: [SQL syntax, sqlite, mysql, union select]
+  - id: web.ctfwiki_sqli
+    file: docs/web/ctfwiki_sqli_strategy.md
+    category: web
+    phase: exploit
+    triggers: [SQL injection, sqli, order by, union select, blind, time based, boolean, database]
+  - id: web.ctfwiki_ssrf_php_file
+    file: docs/web/ctfwiki_ssrf_php_file_strategy.md
+    category: web
+    phase: hypothesis
+    triggers: [SSRF, file include, LFI, RFI, php, upload, wrapper, metadata, 127.0.0.1, file://]
+
+tool_docs:
+  - id: runtime.path_mapping
+    file: docs/runtime/path_mapping.md
+    triggers: [path mapping, workspace, WORKDIR, challenge_id, docker path, host path, /aixctf-agent/workspace]
+  - id: tool.supported
+    file: docs/tools/supported_tools.md
+    triggers: [supported tools, tool list, available tools, installed tools, tools, dependencies]
+  - id: tool.pwn.pwntools
+    file: docs/tools/pwn/pwntools_usage.md
+    category: pwn
+    triggers: [pwntools, exploit.py, remote, process, recvuntil]
+  - id: tool.pwn.gdb
+    file: docs/tools/pwn/gdb_usage.md
+    category: pwn
+    triggers: [gdb, cyclic, offset, crash, core]
+  - id: tool.web.curl
+    file: docs/tools/web/curl_usage.md
+    category: web
+    triggers: [curl, HTTP, header, cookie, redirect]
+  - id: tool.common.file
+    file: docs/tools/common/file_inspection.md
+    triggers: [classify, file, strings, metadata]
+  - id: tool.common.decompiler
+    file: docs/tools/common/decompiler_usage.md
+    triggers: [decompile, decompiler, radare2, r2, pdc, pdf, ELF, native binary, pseudocode]
+
+debug_docs:
+  - id: debug.pwn_pwntools
+    file: docs/debug/pwn_pwntools_debug.md
+    category: pwn
+    triggers: [EOFError, Got EOF, Broken pipe, recvuntil]
+  - id: debug.pwn_libc
+    file: docs/debug/pwn_libc_ld_debug.md
+    category: pwn
+    triggers: [GLIBC, version not found, ld-linux, wrong libc]
+  - id: debug.web_http
+    file: docs/debug/web_http_debug.md
+    category: web
+    triggers: ["403", "404", "500", redirect, cookie, csrf]
+
+handoff_docs:
+  - id: handoff.evidence
+    file: docs/handoff/evidence_standard.md
+    triggers: [evidence, candidate flag, solved, result.json]
+  - id: handoff.resume
+    file: docs/handoff/resume_from_state.md
+    triggers: [resume, handoff, blocked]

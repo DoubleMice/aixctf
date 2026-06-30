@@ -1,0 +1,16 @@
+services:
+  aixctf-agent:
+    build:
+      context: .
+    environment:
+      CHALLENGE_ID: sample_challenge
+      AIXCTF_WORKSPACE_BASE: /aixctf-agent/workspace
+      AIXCTF_DRY_RUN: "1"
+      AIXCTF_MAX_ROUNDS: "2"
+      AIXCTF_MAX_ROUNDS_PER_VISIT: "1"
+      AIXCTF_MAX_SECONDS: "7200"
+      AIXCTF_MAX_CMD_SECONDS: "7200"
+    volumes:
+      - ./sample_challenge:/challenge:ro
+      - ./workspace:/aixctf-agent/workspace
+      - ./local_output:/output

@@ -1,0 +1,38 @@
+@startuml
+!theme plain
+top to bottom direction
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+title Hook-Driven Human Sync Flow
+
+component "PreToolUse\nHook" as Pre #FADBD8
+component "PostToolUse\nHook" as Post #FADBD8
+component "Stop Hook /\nEvidence Guard" as Stop #FADBD8
+component "Round\nManager" as Round #D5F5E3
+component "Native Task\nPostToolUse" as TaskHook #FCF3CF
+queue "sync/events.jsonl" as Events
+component "Human Sync\nAgent" as Agent #D6DBDF
+component "Policy\nrate limit + redact" as Policy #D6DBDF
+component "mntn_skill\nAdapter" as Adapter #D6DBDF
+cloud "Human\nEndpoint" as Endpoint
+database "sync/spool.jsonl" as Spool
+database "sync/sync_log.jsonl" as Log
+
+Pre --> Events : tool_started / tool_blocked
+Post --> Events : tool_finished
+Post --> Events : failure_signal_detected
+Post --> Events : candidate_flag_found
+Stop --> Events : round_checkpoint
+Round --> Events : round_started / round_end
+TaskHook --> Events : subtask_completed / blocked
+
+Events --> Agent : consume
+Agent --> Policy : dedupe + redact
+Policy --> Adapter : summarized payload
+Adapter --> Endpoint : submit
+Adapter --> Spool : fail open on error
+Agent --> Log : record attempt
+
+@enduml

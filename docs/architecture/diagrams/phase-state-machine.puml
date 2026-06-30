@@ -1,0 +1,41 @@
+@startuml
+!theme plain
+left to right direction
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+title Runtime Phase State Machine
+
+state retry #FDEBD0
+state blocked #FADBD8
+state failed #FADBD8
+state solved #D5F5E3
+
+[*] --> init
+init --> classify : workspace initialized
+classify --> triage : category selected
+triage --> hypothesis : facts collected
+hypothesis --> exploit : plausible path
+exploit --> verify : candidate output
+verify --> solved : evidence passed
+
+triage --> retry : tool/env failure
+hypothesis --> retry : inconclusive
+exploit --> retry : payload failed
+verify --> retry : false flag
+retry --> triage : gather facts
+retry --> hypothesis : adjust strategy
+
+init --> failed : fatal env error
+classify --> failed : terminal condition reached
+triage --> failed : no progress
+hypothesis --> blocked : context/scope blocked
+exploit --> blocked : repeated failure
+verify --> failed : evidence rejected
+
+blocked --> retry : next experiment
+solved --> [*]
+failed --> [*]
+
+@enduml

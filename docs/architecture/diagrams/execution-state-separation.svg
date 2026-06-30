@@ -1,0 +1,208 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="title desc">
+  <title id="title">AIxCTF execution and state separation architecture</title>
+  <desc id="desc">Technical README diagram showing control plane scheduling, ephemeral execution, checkpoint contracts, and a durable state ledger.</desc>
+  <defs>
+    <linearGradient id="pageBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8fafc"/>
+      <stop offset="0.52" stop-color="#eef7f4"/>
+      <stop offset="1" stop-color="#fff7ed"/>
+    </linearGradient>
+    <linearGradient id="headerBg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#111827"/>
+      <stop offset="0.45" stop-color="#0f766e"/>
+      <stop offset="1" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="controlFill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ecfeff"/>
+      <stop offset="1" stop-color="#d1fae5"/>
+    </linearGradient>
+    <linearGradient id="execFill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f0fdfa"/>
+      <stop offset="1" stop-color="#e0f2fe"/>
+    </linearGradient>
+    <linearGradient id="contractFill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff7ed"/>
+      <stop offset="1" stop-color="#fef3c7"/>
+    </linearGradient>
+    <linearGradient id="stateFill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eff6ff"/>
+      <stop offset="1" stop-color="#f8fafc"/>
+    </linearGradient>
+    <filter id="panelShadow" x="-12%" y="-16%" width="124%" height="132%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#0f172a" flood-opacity="0.13"/>
+    </filter>
+    <filter id="cardShadow" x="-14%" y="-18%" width="128%" height="136%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#cbd5e1" stroke-width="1" opacity="0.26"/>
+    </pattern>
+    <marker id="arrowTeal" markerWidth="14" markerHeight="14" refX="10" refY="7" orient="auto">
+      <path d="M2 2L12 7L2 12Z" fill="#0f766e"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="14" markerHeight="14" refX="10" refY="7" orient="auto">
+      <path d="M2 2L12 7L2 12Z" fill="#1d4ed8"/>
+    </marker>
+    <marker id="arrowAmber" markerWidth="14" markerHeight="14" refX="10" refY="7" orient="auto">
+      <path d="M2 2L12 7L2 12Z" fill="#f97316"/>
+    </marker>
+    <style>
+      .font { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, Liberation Mono, monospace; }
+      .title { font-size: 44px; font-weight: 850; fill: #ffffff; }
+      .subtitle { font-size: 19px; font-weight: 550; fill: #dbeafe; }
+      .section { font-size: 21px; font-weight: 850; fill: #0f172a; }
+      .label { font-size: 15px; font-weight: 800; fill: #334155; }
+      .small { font-size: 13px; font-weight: 600; fill: #475569; }
+      .tiny { font-size: 12px; font-weight: 650; fill: #64748b; }
+      .code { font-size: 12px; font-weight: 650; fill: #334155; }
+      .onDark { fill: #ffffff; }
+      .onDarkSoft { fill: #cbd5e1; }
+      .onDarkBlue { fill: #dbeafe; }
+      .onDarkTeal { fill: #ccfbf1; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="980" rx="38" fill="url(#pageBg)"/>
+  <rect width="1600" height="980" rx="38" fill="url(#grid)"/>
+
+  <rect x="64" y="48" width="1472" height="128" rx="28" fill="url(#headerBg)" filter="url(#panelShadow)"/>
+  <text x="104" y="104" class="font title">Execution / State Separation</text>
+  <text x="105" y="142" class="font subtitle">Ephemeral agents run experiments. Durable state is the system of record. RuntimeController performs only state transitions.</text>
+
+  <g class="font">
+    <rect x="88" y="222" width="312" height="474" rx="24" fill="url(#controlFill)" stroke="#99f6e4" stroke-width="2" filter="url(#panelShadow)"/>
+    <rect x="436" y="222" width="312" height="474" rx="24" fill="url(#execFill)" stroke="#7dd3fc" stroke-width="2" filter="url(#panelShadow)"/>
+    <rect x="784" y="222" width="312" height="474" rx="24" fill="url(#contractFill)" stroke="#fdba74" stroke-width="2" filter="url(#panelShadow)"/>
+    <rect x="1132" y="222" width="380" height="474" rx="24" fill="url(#stateFill)" stroke="#93c5fd" stroke-width="2" filter="url(#panelShadow)"/>
+
+    <text x="120" y="274" class="section" fill="#0f766e">Control Plane</text>
+    <text x="120" y="300" class="small">Scheduler logic, not exploit logic.</text>
+
+    <text x="468" y="274" class="section" fill="#0369a1">Execution Sandbox</text>
+    <text x="468" y="300" class="small">Restartable ClaudeCode rounds.</text>
+
+    <text x="816" y="274" class="section" fill="#c2410c">Checkpoint Contract</text>
+    <text x="816" y="300" class="small">Only structured deltas cross.</text>
+
+    <text x="1164" y="274" class="section" fill="#1d4ed8">Durable State Ledger</text>
+    <text x="1164" y="300" class="small">Files are the source of truth.</text>
+  </g>
+
+  <g class="font" filter="url(#cardShadow)">
+    <rect x="120" y="330" width="248" height="64" rx="16" fill="#ffffff" stroke="#14b8a6" stroke-width="2"/>
+    <text x="144" y="358" class="label">RuntimeController</text>
+    <text x="144" y="379" class="small">outer loop across challenges</text>
+
+    <rect x="120" y="416" width="248" height="64" rx="16" fill="#ffffff" stroke="#14b8a6" stroke-width="2"/>
+    <text x="144" y="444" class="label">ChallengeScheduler</text>
+    <text x="144" y="465" class="small">priority, pause, resume</text>
+
+    <rect x="120" y="502" width="248" height="64" rx="16" fill="#ffffff" stroke="#14b8a6" stroke-width="2"/>
+    <text x="144" y="530" class="label">Visit Policy</text>
+    <text x="144" y="551" class="small">max rounds per visit</text>
+
+    <rect x="120" y="588" width="248" height="60" rx="16" fill="#0f766e"/>
+    <text x="144" y="615" class="label onDark">State transition only</text>
+    <text x="144" y="635" class="small onDarkTeal">no tactical exploit decisions</text>
+  </g>
+
+  <g class="font" filter="url(#cardShadow)">
+    <rect x="468" y="330" width="248" height="64" rx="16" fill="#ffffff" stroke="#38bdf8" stroke-width="2"/>
+    <text x="492" y="358" class="label">ClaudeCode Primary</text>
+    <text x="492" y="379" class="small">hypothesis, experiment, result</text>
+
+    <rect x="468" y="416" width="248" height="64" rx="16" fill="#ffffff" stroke="#38bdf8" stroke-width="2"/>
+    <text x="492" y="444" class="label">Native Task Subagents</text>
+    <text x="492" y="465" class="small">bounded local questions</text>
+
+    <rect x="468" y="502" width="248" height="64" rx="16" fill="#ffffff" stroke="#38bdf8" stroke-width="2"/>
+    <text x="492" y="530" class="label">Pwn / Web Tools</text>
+    <text x="492" y="551" class="small">gdb, radare2, curl, requests</text>
+
+    <rect x="468" y="588" width="248" height="60" rx="16" fill="#0369a1"/>
+    <text x="492" y="615" class="label onDark">Disposable runtime</text>
+    <text x="492" y="635" class="small onDarkBlue">timeout or crash is recoverable</text>
+  </g>
+
+  <g class="font" filter="url(#cardShadow)">
+    <rect x="816" y="330" width="248" height="220" rx="16" fill="#ffffff" stroke="#fb923c" stroke-width="2"/>
+    <text x="840" y="360" class="label" fill="#c2410c">round_result JSON</text>
+    <text x="840" y="388" class="mono code">{</text>
+    <text x="862" y="412" class="mono code">"status": "progress|solved",</text>
+    <text x="862" y="436" class="mono code">"phase_after": "verify",</text>
+    <text x="862" y="460" class="mono code">"state_delta": {...},</text>
+    <text x="862" y="484" class="mono code">"evidence": [...],</text>
+    <text x="862" y="508" class="mono code">"next_experiment": "..."</text>
+    <text x="840" y="532" class="mono code">}</text>
+
+    <rect x="816" y="574" width="248" height="74" rx="16" fill="#fff7ed" stroke="#fdba74" stroke-width="2"/>
+    <text x="840" y="603" class="label" fill="#c2410c">Validation gates</text>
+    <text x="840" y="625" class="small">scope, provenance, evidence guard</text>
+  </g>
+
+  <g class="font" filter="url(#cardShadow)">
+    <rect x="1164" y="330" width="146" height="62" rx="14" fill="#1d4ed8"/>
+    <text x="1183" y="356" class="label onDark">state.json</text>
+    <text x="1183" y="376" class="tiny onDarkBlue">scheduler, phase</text>
+
+    <rect x="1332" y="330" width="146" height="62" rx="14" fill="#eff6ff" stroke="#60a5fa" stroke-width="2"/>
+    <text x="1351" y="356" class="label" fill="#1d4ed8">rounds/</text>
+    <text x="1351" y="376" class="tiny" fill="#1d4ed8">round history</text>
+
+    <rect x="1164" y="416" width="146" height="62" rx="14" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+    <text x="1183" y="442" class="label">events/</text>
+    <text x="1183" y="462" class="tiny">tool lifecycle</text>
+
+    <rect x="1332" y="416" width="146" height="62" rx="14" fill="#f0fdf4" stroke="#4ade80" stroke-width="2"/>
+    <text x="1351" y="442" class="label" fill="#15803d">evidence/</text>
+    <text x="1351" y="462" class="tiny" fill="#15803d">proof artifacts</text>
+
+    <rect x="1164" y="502" width="146" height="62" rx="14" fill="#fefce8" stroke="#facc15" stroke-width="2"/>
+    <text x="1183" y="528" class="label" fill="#a16207">handoff.md</text>
+    <text x="1183" y="548" class="tiny" fill="#a16207">resume cursor</text>
+
+    <rect x="1332" y="502" width="146" height="62" rx="14" fill="#fff1f2" stroke="#fb7185" stroke-width="2"/>
+    <text x="1351" y="528" class="label" fill="#be123c">result.json</text>
+    <text x="1351" y="548" class="tiny" fill="#be123c">final output</text>
+
+    <rect x="1164" y="588" width="314" height="60" rx="16" fill="#1d4ed8"/>
+    <text x="1188" y="615" class="label onDark">Atomic state merge</text>
+    <text x="1188" y="635" class="small onDarkBlue">state snapshots enable deterministic resume</text>
+  </g>
+
+  <path d="M368 362H456" stroke="#0f766e" stroke-width="4" marker-end="url(#arrowTeal)" fill="none"/>
+  <text x="412" y="342" class="font tiny" text-anchor="middle" fill="#0f766e">dispatch visit</text>
+  <path d="M716 448H804" stroke="#0369a1" stroke-width="4" marker-end="url(#arrowBlue)" fill="none"/>
+  <text x="760" y="429" class="font tiny" text-anchor="middle" fill="#0369a1">emit result</text>
+  <path d="M1064 448H1152" stroke="#f97316" stroke-width="4" marker-end="url(#arrowAmber)" fill="none"/>
+  <text x="1108" y="429" class="font tiny" text-anchor="middle" fill="#c2410c">validated merge</text>
+
+  <path d="M1156 232C980 182 620 184 250 318" stroke="#1d4ed8" stroke-width="3" stroke-dasharray="9 10" marker-end="url(#arrowBlue)" fill="none"/>
+  <rect x="510" y="190" width="392" height="26" rx="13" fill="#f8fafc" opacity="0.92"/>
+  <text x="706" y="208" class="font tiny" text-anchor="middle" fill="#1d4ed8">read durable snapshot before scheduling next transition</text>
+
+  <path d="M244 480V494" stroke="#0f766e" stroke-width="3" marker-end="url(#arrowTeal)" fill="none"/>
+  <path d="M592 480V494" stroke="#0369a1" stroke-width="3" marker-end="url(#arrowBlue)" fill="none"/>
+
+  <rect x="88" y="736" width="1424" height="154" rx="26" fill="#0f172a" filter="url(#panelShadow)"/>
+  <text x="124" y="782" class="font section onDark">Design invariants</text>
+
+  <g class="font">
+    <rect x="124" y="808" width="306" height="52" rx="14" fill="#111827" stroke="#2dd4bf" stroke-width="1.5"/>
+    <text x="148" y="831" class="label onDarkTeal">Agents cannot write state</text>
+    <text x="148" y="850" class="tiny onDarkSoft">runtime-owned files stay guarded</text>
+
+    <rect x="458" y="808" width="306" height="52" rx="14" fill="#111827" stroke="#60a5fa" stroke-width="1.5"/>
+    <text x="482" y="831" class="label onDarkBlue">Solved requires provenance</text>
+    <text x="482" y="850" class="tiny onDarkSoft">flag, transcript, evidence, handoff</text>
+
+    <rect x="792" y="808" width="306" height="52" rx="14" fill="#111827" stroke="#f59e0b" stroke-width="1.5"/>
+    <text x="816" y="831" class="label" style="fill:#fdba74">Hard challenges can pause</text>
+    <text x="816" y="850" class="tiny onDarkSoft">scheduler rotates to higher-value work</text>
+
+    <rect x="1126" y="808" width="350" height="52" rx="14" fill="#111827" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="1150" y="831" class="label" style="fill:#c4b5fd">Multi-challenge summary is derived</text>
+    <text x="1150" y="850" class="tiny onDarkSoft">/output/result.json comes from per-challenge results</text>
+  </g>
+</svg>

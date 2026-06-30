@@ -1,0 +1,45 @@
+enabled: true
+mode: hook_enqueue_round_flush
+
+mntn_skill:
+  enabled: true
+  timeout_seconds: 5
+  max_retries: 3
+  fail_open: true
+
+direct_hook_submit:
+  enabled: false
+  only_event_types:
+    - solved
+    - failed
+    - candidate_flag_found
+  timeout_seconds: 2
+  fail_open: true
+
+frequency:
+  sync_on_round_end: true
+  sync_on_phase_change: true
+  sync_on_candidate_flag: true
+  sync_on_subtask_completed: true
+  sync_on_blocked: true
+  sync_on_solved: true
+  sync_on_failed: true
+  min_interval_seconds: 15
+  max_messages_per_round: 3
+  dedupe_same_message: true
+
+content:
+  include_artifact_paths: true
+  include_log_preview: true
+  max_log_preview_chars: 800
+  include_candidate_flag: false
+  include_verified_flag: false
+  redact_secrets: true
+
+spool:
+  enabled: true
+  path: sync/spool.jsonl
+
+local_log:
+  enabled: true
+  path: sync/sync_log.jsonl

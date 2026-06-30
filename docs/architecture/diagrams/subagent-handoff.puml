@@ -1,0 +1,30 @@
+@startuml
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+title Bounded Subagent Handoff
+
+participant "Primary Agent" as Primary
+participant "Task Tool\n(general-purpose)" as Task
+participant "PostToolUse\nHook" as Hook
+participant "Handoff\nCollector" as Collector
+participant "State Store" as State
+
+Primary -> Primary : decide bounded delegation
+
+alt bounded task needed
+  Primary -> Task : subagent_type=general-purpose
+  Task -> Task : local experiment only
+  Task --> Primary : compact JSON result
+  Primary -> Hook : PostToolUse(Task)
+  Hook -> Collector : subtasks/task_XXX/result.json
+  Collector -> State : merge confirmed facts
+  Collector -> State : add open questions
+  Collector -> State : record do_not_repeat
+else direct execution
+  Primary -> Primary : continue current round
+end
+
+@enduml

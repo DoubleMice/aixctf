@@ -1,0 +1,67 @@
+@startuml
+!theme plain
+top to bottom direction
+skinparam backgroundColor #FFFFFF
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+title AIxCTF AutoResearch / AutoExploit Runtime
+
+actor "AIxCTF\nChallenge Set" as Challenge
+folder "/challenge" as Input
+folder "/aixctf-agent/workspace" as WorkspaceBase
+folder "/aixctf-agent/workspace/<challenge_id>\nper challenge workspace" as Workspace
+folder "/output" as Output
+
+node "Docker Image" as Docker {
+  component "entrypoint.py" as Entrypoint #D6EAF8
+  component "Runtime\nController" as Runtime #D5F5E3
+  component "Challenge\nScheduler" as Scheduler #D5F5E3
+  component "Parallel Visit\nExecutor" as VisitPool #D5F5E3
+  component "Loop Core\nper visit" as Loop #D5F5E3
+  component "Round\nManager\nper visit" as Round #D5F5E3
+  component "ClaudeCode\nChild Process\nper active challenge" as Claude #FDEBD0
+  component "Native Task\ninside child process" as NativeTask #FCF3CF
+  component "Hook\nCheckpoint Layer" as Hooks #FADBD8
+  component "Knowledge\nRouter" as Knowledge #E8DAEF
+  component "Progress\nExporter" as Progress #D6DBDF
+  component "Human Sync\nAgent" as SyncAgent #D6DBDF
+  component "Result\nCollector" as Result #D5F5E3
+}
+
+database "State Store\nstate.json" as State
+database "Event Store\nevents/*.json" as Events
+queue "Sync Queue\nsync/events.jsonl" as SyncQueue
+cloud "mntn_skill\nEndpoint" as Endpoint
+
+Challenge --> Input
+Input --> Entrypoint : mount challenge set
+Entrypoint --> Runtime : start
+Runtime --> Scheduler : choose schedulable\nchallenge records
+Scheduler --> State : read status\nand limits
+Runtime --> WorkspaceBase : create isolated\nworkspaces
+Runtime --> VisitPool : run up to\nAIXCTF_MAX_PARALLEL_CHALLENGES
+VisitPool --> Workspace : one WORKDIR per\nClaude child process
+VisitPool --> Loop : per-challenge visit
+Loop --> Round : run round
+Round --> Claude : prompt + docs\nchild env has WORKDIR
+Knowledge --> Round : selected docs
+Claude --> NativeTask : Task tool
+NativeTask --> Hooks : Task PostToolUse
+Claude --> Hooks : tool lifecycle
+Hooks --> Events : append events
+Hooks --> State : update signals
+Hooks --> SyncQueue : emit sync events
+Hooks --> Workspace : subtasks/task_*
+Round --> Progress : progress/status
+Round --> State : reload latest state\nthen merge round_result
+Round --> SyncAgent : flush round
+SyncAgent --> SyncQueue : consume
+SyncAgent ..> Endpoint : fail-open submit
+Runtime --> Result : per-challenge\nterminal state
+Result --> Workspace : result.json
+Result --> Output : <challenge_id>/result.json\nor single result
+Runtime --> Output : controller summary\nresult.json
+
+@enduml

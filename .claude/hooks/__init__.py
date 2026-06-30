@@ -1,0 +1,1 @@
+"""AIxCTF ClaudeCode hook package."""

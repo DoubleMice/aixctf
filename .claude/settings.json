@@ -1,0 +1,37 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Write|Edit|MultiEdit|Task|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${AIXCTF_AGENT_ROOT:-/aixctf-agent}/hooks/hook_entrypoint.py pre_tool"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Write|Edit|MultiEdit|Task|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${AIXCTF_AGENT_ROOT:-/aixctf-agent}/hooks/hook_entrypoint.py post_tool"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${AIXCTF_AGENT_ROOT:-/aixctf-agent}/hooks/hook_entrypoint.py stop"
+          }
+        ]
+      }
+    ]
+  }
+}

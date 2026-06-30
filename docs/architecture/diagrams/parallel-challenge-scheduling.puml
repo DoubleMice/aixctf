@@ -1,0 +1,51 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+title Parallel Challenge Scheduling
+
+participant "RuntimeController" as RC
+participant "ChallengeScheduler" as Scheduler
+participant "Visit Executor\nThreadPool" as Pool
+participant "Challenge A\nWorkspace" as WorkA
+participant "ClaudeCode A\nChild Process" as ClaudeA
+participant "Challenge B\nWorkspace" as WorkB
+participant "ClaudeCode B\nChild Process" as ClaudeB
+participant "Controller Summary\n/output/result.json" as Summary
+
+RC -> Scheduler : select schedulable records
+Scheduler --> RC : A, B\nnot solved/exhausted/failed/active
+RC -> Pool : submit visit(A)
+RC -> Pool : submit visit(B)
+
+par challenge A
+  Pool -> WorkA : ensure workspace\nstate/status/progress
+  Pool -> ClaudeA : run round with\nWORKDIR=A
+  ClaudeA -> WorkA : hooks write events\nstate/evidence/subtasks
+  Pool -> WorkA : reload state.json\nmerge round_result
+  Pool --> RC : state/result/pause_reason
+else challenge B
+  Pool -> WorkB : ensure workspace\nstate/status/progress
+  Pool -> ClaudeB : run round with\nWORKDIR=B
+  ClaudeB -> WorkB : hooks write events\nstate/evidence/subtasks
+  Pool -> WorkB : reload state.json\nmerge round_result
+  Pool --> RC : state/result/pause_reason
+end
+
+RC -> Scheduler : update records
+RC -> Summary : write controller_result\nand /output/result.json
+
+note over RC
+RuntimeController schedules only from
+model-produced state/result status.
+It does not inspect exploit tactics.
+end note
+
+note over Pool
+AIXCTF_MAX_PARALLEL_CHALLENGES
+limits active visits.
+Each visit owns one ClaudeCode process.
+end note
+
+@enduml

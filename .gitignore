@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+.claude/workspace/
+.claude/output/
+.claude/local_output/
+.claude/sample_challenge/
+
+.DS_Store

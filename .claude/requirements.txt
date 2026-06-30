@@ -1,0 +1,12 @@
+beautifulsoup4
+capstone
+flask-unsign
+itsdangerous
+lxml
+pwntools
+pyjwt
+pyyaml
+requests
+ROPGadget
+unicorn
+z3-solver

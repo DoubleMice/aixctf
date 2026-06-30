@@ -1,0 +1,105 @@
+skills:
+  - id: pwn.ret2win
+    file: docs/pwn/pwn_ret2win.md
+    category: pwn
+    phase: exploit
+    triggers:
+      - win function
+      - get_flag
+      - no PIE
+      - stack overflow
+      - ret2win
+    preconditions:
+      - binary has reachable overflow
+      - target function address is known
+    tools:
+      - checksec
+      - nm
+      - objdump
+      - gdb
+      - pwntools
+    output:
+      - scripts/exploit.py
+      - evidence/pwn_success.log
+
+  - id: pwn.fmtstr
+    file: docs/pwn/pwn_fmtstr.md
+    category: pwn
+    phase: exploit
+    triggers:
+      - printf(user_input)
+      - "%p"
+      - "%s"
+      - format string
+      - leak
+    preconditions:
+      - user controls format string
+    tools:
+      - pwntools
+      - gdb
+
+  - id: web.ssti
+    file: docs/web/web_ssti.md
+    category: web
+    phase: exploit
+    triggers:
+      - "{{7*7}}"
+      - template
+      - Jinja2
+      - render_template_string
+      - SSTI
+    preconditions:
+      - user input is reflected
+    tools:
+      - curl
+      - requests
+
+  - id: web.sqli
+    file: docs/web/web_sqli.md
+    category: web
+    phase: exploit
+    triggers:
+      - SQL syntax
+      - sqlite
+      - mysql
+      - "' or '1'='1"
+      - union select
+
+debug_docs:
+  - id: debug.pwn_pwntools
+    file: docs/debug/pwn_pwntools_debug.md
+    category: pwn
+    triggers:
+      - EOFError
+      - Got EOF
+      - Broken pipe
+      - recvuntil
+
+  - id: debug.pwn_libc
+    file: docs/debug/pwn_libc_ld_debug.md
+    category: pwn
+    triggers:
+      - GLIBC
+      - version not found
+      - ld-linux
+      - wrong libc
+
+  - id: debug.web_http
+    file: docs/debug/web_http_debug.md
+    category: web
+    triggers:
+      - "403"
+      - "404"
+      - "500"
+      - redirect
+      - cookie
+      - csrf
+
+handoff_docs:
+  - id: handoff.evidence
+    file: docs/handoff/evidence_standard.md
+    triggers:
+      - evidence
+      - candidate flag
+      - solved
+      - result.json
