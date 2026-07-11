@@ -1,0 +1,48 @@
+@startuml
+!theme plain
+top to bottom direction
+scale max 1600 width
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam linetype ortho
+skinparam defaultFontName Arial
+skinparam defaultFontSize 20
+skinparam ArrowFontName Arial
+skinparam ArrowFontSize 17
+skinparam ArrowThickness 3
+skinparam ArrowColor #475569
+skinparam nodesep 90
+skinparam ranksep 120
+skinparam rectangle {
+  BorderColor #334155
+  FontColor #0F172A
+  BorderThickness 2
+  RoundCorner 24
+}
+title <size:34><b>State-Driven AutoResearch Loop</b></size>\n<size:20>Every Execution writes the State that launches the next one.</size>
+
+rectangle "<size:24><b>Durable Research State S(n)</b></size>\n\n<size:18><b>Machine state</b>  ·  <b>Semantic state</b></size>\n<size:17>state.json  ·  handoff.md</size>\n<size:17>evidence  ·  durable artifacts</size>" as State #DBEAFE
+
+rectangle "<size:24><b>Fresh Claude Code Execution E(n)</b></size>\n\n<size:18>Tools  ·  Native Tasks</size>\n<size:18>Related experiments</size>\n<size:17>Semantically coherent; bounded by hard limits</size>" as Execution #FFEDD5
+
+rectangle "<size:23><b>Commit State S(n+1)</b></size>\n\n<size:17>Model updates handoff.md</size>\n<size:17>Runtime merges structured output</size>" as Commit #EDE9FE
+
+rectangle "Evidence-gated\ncomplete?" as Gate #DCFCE7
+
+rectangle "<size:23><b>result.json</b></size>\n<size:17>Verified completion</size>" as Result #BBF7D0
+
+rectangle "<size:21><b>Execution disappears</b></size>\n<size:17>crash  ·  timeout  ·  context loss</size>\n<size:17>Restart from the last durable State</size>" as Interrupted #FEE2E2
+
+State -right-> Execution : instantiate
+Execution -right-> Commit : checkpoint
+Commit -down-> Gate
+Gate -right-> Result : yes
+Gate -left-> State : no — continue
+
+Execution -down-> Interrupted
+Interrupted -left-> State : recover
+
+caption <size:20><b>The process may stop. The research loop continues from durable State.</b></size>\n<size:16>Continues until evidence-gated completion or a configured hard limit.</size>
+
+@enduml

@@ -1,30 +1,45 @@
 @startuml
 !theme plain
+hide footbox
+scale max 1400 width
+
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam defaultFontName Arial
+skinparam defaultFontSize 16
+skinparam sequence {
+  ArrowColor #475569
+  ArrowThickness 2
+  ArrowFontColor #334155
+  ArrowFontSize 14
+  LifeLineBorderColor #94A3B8
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBorderColor #334155
+  ParticipantFontColor #0F172A
+  ParticipantFontSize 16
+  ParticipantPadding 20
+}
 
-title Bounded Subagent Handoff
+title <size:30><b>Bounded Task Handoff</b></size>\n<size:17>Local context-heavy work returns compact, durable evidence to the primary Execution.</size>
 
-participant "Primary Agent" as Primary
-participant "Task Tool\n(general-purpose)" as Task
-participant "PostToolUse\nHook" as Hook
-participant "Handoff\nCollector" as Collector
-participant "State Store" as State
+participant "Primary\nExecution" as Primary #FFEDD5
+participant "Native Task\n(general-purpose)" as Task #FFF7ED
+participant "PostToolUse\nHook" as Hook #CCFBF1
+collections "Task Artifacts\ninput · output · result · handoff" as Artifacts #F1F5F9
+database "state.json\nMachine State" as State #DBEAFE
 
-Primary -> Primary : decide bounded delegation
+Primary -> Task : bounded question + completion criteria
+activate Task
+Task -> Task : local experiment only
+Task --> Primary : compact protocol JSON
+deactivate Task
 
-alt bounded task needed
-  Primary -> Task : subagent_type=general-purpose
-  Task -> Task : local experiment only
-  Task --> Primary : compact JSON result
-  Primary -> Hook : PostToolUse(Task)
-  Hook -> Collector : subtasks/task_XXX/result.json
-  Collector -> State : merge confirmed facts
-  Collector -> State : add open questions
-  Collector -> State : record do_not_repeat
-else direct execution
-  Primary -> Primary : continue current round
-end
+Primary -> Hook : PostToolUse(Task)
+Hook -> Artifacts : persist task_XXX artifacts
+Hook -> State : merge confirmed facts, open questions, do_not_repeat
+
+note over Primary, State #EDE9FE
+  The primary model decides what belongs in challenge-level handoff.md.
+end note
 
 @enduml

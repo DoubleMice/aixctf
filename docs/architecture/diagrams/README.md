@@ -4,6 +4,7 @@ PlantUML sources, rendered PNGs, and README SVG visuals are kept together.
 
 | Diagram | Source | Rendered |
 |---|---|---|
+| State-Driven AutoResearch Loop | [state-driven-autoresearch-loop.puml](state-driven-autoresearch-loop.puml) | [state-driven-autoresearch-loop.png](state-driven-autoresearch-loop.png) |
 | Execution and State Separation | [execution-state-separation.svg](execution-state-separation.svg) | [execution-state-separation.svg](execution-state-separation.svg) |
 | System Architecture | [system-architecture.puml](system-architecture.puml) | [system-architecture.png](system-architecture.png) |
 | Parallel Challenge Scheduling | [parallel-challenge-scheduling.puml](parallel-challenge-scheduling.puml) | [parallel-challenge-scheduling.png](parallel-challenge-scheduling.png) |

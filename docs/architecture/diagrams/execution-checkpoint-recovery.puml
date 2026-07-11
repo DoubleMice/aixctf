@@ -1,49 +1,75 @@
 @startuml
 !theme plain
+hide footbox
+scale max 1500 width
+
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam defaultFontName Arial
+skinparam defaultFontSize 16
+skinparam sequence {
+  ArrowColor #475569
+  ArrowThickness 2
+  ArrowFontColor #334155
+  ArrowFontSize 14
+  LifeLineBorderColor #94A3B8
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBorderColor #334155
+  ParticipantFontColor #0F172A
+  ParticipantFontSize 16
+  ParticipantPadding 18
+  GroupBorderColor #94A3B8
+  GroupHeaderFontColor #0F172A
+  GroupFontSize 16
+}
 
-title Execution Checkpoint and Interruption Recovery
+title <size:30><b>Execution Checkpoint and Interruption Recovery</b></size>\n<size:17>Normal Stop commits state; interruption restarts from durable inputs.</size>
 
-participant "Runtime" as Runtime
-participant "Progress\nLedger" as Progress
-participant "Claude Code\nExecution" as Claude
-participant "Hooks" as Hooks
-database "state.json" as State
-collections "handoff.md" as Handoff
-collections "Durable\nArtifacts" as Artifacts
+participant "Runtime" as Runtime #DBEAFE
+participant "Execution\nLedger" as Ledger #E0F2FE
+participant "Claude Code\nExecution" as Claude #FFEDD5
+participant "Hooks" as Hooks #CCFBF1
+database "state.json\nMachine State" as State #DBEAFE
+collections "handoff.md\nSemantic State" as Handoff #EDE9FE
+collections "Durable\nArtifacts" as Artifacts #F1F5F9
 
 == Normal checkpoint ==
-Runtime -> Progress : execution_started
-Runtime -> Claude : fresh process(state + handoff)
-Claude -> Artifacts : logs, scripts, evidence, events
-Claude -> Handoff : update semantic state
+Runtime -> Ledger : execution_started
+Runtime -> Claude : launch fresh(state + handoff)
+Claude -> Artifacts : persist logs, scripts, evidence, events
+Claude -> Handoff : update next semantic state
 Claude -> Hooks : Stop
-Hooks --> Claude : allow (mtime is fresh)
+alt handoff updated during this Execution
+  Hooks --> Claude : allow Stop
+else first stale handoff
+  Hooks --> Claude : block once; request checkpoint
+  Claude -> Handoff : externalize semantic state
+  Claude -> Hooks : Stop again
+  Hooks --> Claude : allow Stop
+end
 Claude --> Runtime : structured state output
-Runtime -> State : merge state
-Runtime -> Progress : execution_completed(complete)
+Runtime -> State : reload and merge
+Runtime -> Ledger : execution_completed(complete)
 
 == Context pressure ==
 Claude -> Hooks : PreCompact(auto)
-Hooks --> Claude : block compaction;\nrequest handoff checkpoint
+Hooks --> Claude : block compaction; request checkpoint
 Claude -> Handoff : update semantic state
 Claude --> Runtime : structured state output
 
 == Unexpected interruption ==
 Claude -x Runtime : crash, timeout, or API failure
-note over Progress
+note over Runtime, Ledger #FEE2E2
   execution_started has no matching completion
 end note
-Runtime -> Progress : detect unfinished Execution
-Runtime -> Claude : start fresh recovery Execution
+Runtime -> Ledger : detect unfinished Execution
+Runtime -> Claude : launch fresh recovery Execution
 Claude -> State : read machine state
 Claude -> Handoff : read potentially stale semantics
 Claude -> Artifacts : inspect newer durable observations
 Claude -> Handoff : reconcile and update
 Claude --> Runtime : recovered state output
 Runtime -> State : merge recovered state
-Runtime -> Progress : execution_completed(complete)
+Runtime -> Ledger : execution_completed(complete)
 
 @enduml

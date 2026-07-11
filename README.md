@@ -25,11 +25,11 @@ conversation context.
 
 > Context is not memory. Durable state is memory.
 
+![State-Driven AutoResearch Loop](docs/architecture/diagrams/state-driven-autoresearch-loop.png)
+
 AIxCTF is an early CTF AutoResearch implementation. It is not a benchmark
 claim, a production-grade sandbox, or a promise that Claude Code can solve
 every CTF challenge.
-
-![Execution and State Separation](docs/architecture/diagrams/execution-state-separation.svg)
 
 ## Two design principles
 
@@ -54,6 +54,8 @@ challenge
   -> hook checkpoints
   -> state, evidence, handoff, and result
 ```
+
+![Execution and State Separation](docs/architecture/diagrams/execution-state-separation.svg)
 
 A chat transcript is transient and difficult to audit. AIxCTF instead records
 each challenge in an isolated workspace so a run can be inspected and resumed

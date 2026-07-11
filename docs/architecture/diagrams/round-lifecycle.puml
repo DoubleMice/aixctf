@@ -1,27 +1,45 @@
 @startuml
 !theme plain
+hide footbox
+scale max 1500 width
+
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam defaultFontName Arial
+skinparam defaultFontSize 16
+skinparam sequence {
+  ArrowColor #475569
+  ArrowThickness 2
+  ArrowFontColor #334155
+  ArrowFontSize 14
+  LifeLineBorderColor #94A3B8
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBorderColor #334155
+  ParticipantFontColor #0F172A
+  ParticipantFontSize 16
+  ParticipantPadding 18
+  GroupBorderColor #94A3B8
+  GroupHeaderFontColor #0F172A
+  GroupFontSize 16
+}
 
-title State-Driven AutoResearch Execution
+title <size:30><b>State-Driven Execution Lifecycle</b></size>\n<size:17>A fresh Execution reads durable state, works freely, then commits the next state.</size>
 
-participant "Runtime\nController" as Runtime
-participant "Round\nManager" as Round
-database "state.json" as State
-collections "handoff.md" as Handoff
-participant "Claude Code\nFresh Execution" as Claude
-participant "Hooks" as Hooks
-participant "Progress\nLedger" as Progress
+participant "Runtime" as Runtime #DBEAFE
+database "state.json\nMachine State" as State #DBEAFE
+collections "handoff.md\nSemantic State" as Handoff #EDE9FE
+participant "Claude Code\nFresh Execution" as Claude #FFEDD5
+participant "Hooks" as Hooks #CCFBF1
+participant "Execution\nLedger" as Ledger #E0F2FE
 
 Runtime -> State : load machine state
-Round -> Progress : execution_started(id, time)
-Round -> Handoff : read semantic state
-Round -> Claude : prompt(state + handoff + docs)
+Runtime -> Handoff : load semantic state
+Runtime -> Ledger : execution_started(id, time)
+Runtime -> Claude : launch(state + handoff + selected docs)
 
-loop strongly related experiments
+loop semantically coherent research
   Claude -> Hooks : PreToolUse / PostToolUse
-  Hooks -> State : flags, evidence indexes, signals
+  Hooks -> State : persist flags, evidence indexes, signals
   Hooks --> Claude : allow, deny, observation
 end
 
@@ -36,8 +54,8 @@ else first stale handoff
   Hooks --> Claude : allow Stop
 end
 
-Claude --> Round : structured state output
-Round -> State : reload and apply result
-Runtime -> Progress : execution_completed(checkpoint status)
+Claude --> Runtime : structured state output
+Runtime -> State : reload and apply result
+Runtime -> Ledger : execution_completed(checkpoint status)
 
 @enduml
