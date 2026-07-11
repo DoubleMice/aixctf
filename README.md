@@ -1,127 +1,180 @@
-# AIxCTF ClaudeCode AutoResearch Runtime
+# AIxCTF
 
-Dockerized CTF solving runtime that uses ClaudeCode as the semantic solver, deterministic hooks as checkpoint controls, and durable workspace artifacts as the source of truth.
+**A CTF AutoResearch project built around Claude Code, durable research data,
+and a strict separation between execution and data.**
 
-The runtime is designed as an outer controller loop over challenges and an inner
-round loop per challenge. `RuntimeController` keeps scheduling challenges until
-all are solved or a hard runtime limit is reached. Each round records a research
-question, hypothesis, experiment, observation, evidence, conclusion, and next
-experiment.
+AIxCTF applies the AutoResearch model to CTF solving. Instead of treating a
+challenge as one long chat or repeatedly asking a model for a flag, it turns
+the solve process into bounded research rounds:
+
+```text
+question -> hypothesis -> experiment -> observation
+         -> evidence -> conclusion -> next experiment
+```
+
+The second core idea is execution/data separation. Claude Code processes are
+restartable executors. Research state lives outside the model context in files
+owned by the runtime. The executor may stop, time out, or be replaced without
+making its chat history the only record of the research.
+
+> Context is not memory. Durable state is memory.
+
+AIxCTF is an early CTF AutoResearch implementation. It is not a benchmark
+claim, a production-grade sandbox, or a promise that Claude Code can solve
+every CTF challenge.
 
 ![Execution and State Separation](docs/architecture/diagrams/execution-state-separation.svg)
 
-## Architecture
+## Two design principles
 
-Start with the split architecture docs:
+### AutoResearch for CTF
 
-- [Architecture Index](arch.md)
-- [Architecture Overview](docs/architecture/01-overview.md)
-- [AutoResearch Loop](docs/architecture/02-autoresearch-loop.md)
-- [Runtime Components](docs/architecture/03-runtime-components.md)
-- [State, Artifacts, and Results](docs/architecture/04-state-artifacts-results.md)
-- [Subagents and Handoff](docs/architecture/05-subagents-and-handoff.md)
-- [Hooks, Progress, and Human Sync](docs/architecture/06-hooks-progress-sync.md)
-- [Knowledge Library and Prompts](docs/architecture/07-knowledge-library-prompts.md)
-- [Build, MVP Plan, and Acceptance](docs/architecture/08-build-mvp-acceptance.md)
+Each round must externalize what it tried, what it observed, what evidence it
+found, and what should happen next. Failed paths and open questions become
+inputs to later rounds instead of disappearing into transient context.
 
-The current monolithic handoff is available at [docs/architecture/full-handoff-v1.md](docs/architecture/full-handoff-v1.md).
+### Execution and data separation
 
-## Diagrams
-
-Rendered PlantUML diagrams are available in [docs/architecture/diagrams](docs/architecture/diagrams/README.md).
-
-![System Architecture](docs/architecture/diagrams/system-architecture.png)
-
-Key diagrams:
-
-- [Execution and State Separation](docs/architecture/diagrams/execution-state-separation.svg)
-- [Runtime Path Mapping](docs/architecture/diagrams/runtime-path-mapping.png)
-- [Parallel Challenge Scheduling](docs/architecture/diagrams/parallel-challenge-scheduling.png)
-- [Round Lifecycle](docs/architecture/diagrams/round-lifecycle.png)
-- [Phase State Machine](docs/architecture/diagrams/phase-state-machine.png)
-- [Human Sync Flow](docs/architecture/diagrams/human-sync-flow.png)
-- [Subagent Handoff](docs/architecture/diagrams/subagent-handoff.png)
-
-## Repository Layout
+Claude Code is the semantic executor: it reasons about the challenge, runs
+experiments, and attempts exploits. The runtime owns scheduling, state
+transitions, validation, and durable artifacts:
 
 ```text
-.claude/
-  entrypoint.py
-  runner/        controller scheduler, round loop, state stores, progress/status
-  hooks/         Claude Code hook adapters and guards
-  sync/          fail-open human progress sync
-  templates/     generic, pwn, web, and native Task subagent prompts
-  docs/          knowledge index and tactical cards
-  tools/         pwn/web triage helpers
-docs/
-  architecture/  split architecture documents and diagrams
+challenge
+  -> runtime controller
+  -> challenge scheduler
+  -> bounded research round
+  -> Claude Code
+  -> hook checkpoints
+  -> state, evidence, handoff, and result
 ```
 
-Runtime output directories such as `.claude/workspace/`, `.claude/output/`, logs, and generated caches are ignored.
+A chat transcript is transient and difficult to audit. AIxCTF instead records
+each challenge in an isolated workspace so a run can be inspected and resumed
+from durable facts.
 
-Default Docker workspaces live under `/aixctf-agent/workspace/<challenge_id>/`.
-With the provided compose file, host `.claude/workspace/<challenge_id>/` maps to
-that Docker path. See `.claude/docs/runtime/path_mapping.md` for the full path
-mapping.
+The outer `RuntimeController` schedules challenge visits until challenges are
+solved, exhausted, or a hard runtime limit is reached. In multi-challenge mode,
+each active challenge gets its own workspace and Claude Code child process.
 
-## Build and Run
+## Evidence-gated results
 
-Build the Docker image:
+The runtime does not accept a bare claim that a challenge is solved. A solved
+result requires an exact flag, an evidence artifact containing the flag, and
+reproducible command or script provenance. A failed result records a failure
+reason and handoff so later work can continue from the observed state.
 
-```bash
-docker build -t aixctf-agent .claude
-```
+This is a first evidence gate, not an independent flag verifier.
 
-Run a local dry-run without ClaudeCode:
+## Quick start
 
-```bash
-CHALLENGE_ID=sample CHALLENGE_DIR=. OUTPUT_DIR=/tmp/aixctf-out \
-  AIXCTF_DRY_RUN=1 AIXCTF_MAX_ROUNDS=2 AIXCTF_MAX_ROUNDS_PER_VISIT=1 \
-  python3 .claude/entrypoint.py
-```
+Requirements for a local dry-run:
 
-For a directory containing multiple challenges, set `CHALLENGE_DIR` to the
-bundle root. Auto-discovery is enabled by default; use
-`AIXCTF_CHALLENGE_MODE=single` or `AIXCTF_CHALLENGE_MODE=multi` to force either
-mode.
+- Python 3.11 or newer;
+- no API key or Claude Code installation is required.
 
-In multi-challenge mode the controller can run several challenge visits at the
-same time. Each visit launches its own ClaudeCode process with an isolated
-`WORKDIR` under `/aixctf-agent/workspace/<challenge_id>/`. Set
-`AIXCTF_MAX_PARALLEL_CHALLENGES` to control this fan-out; the default is 2 for
-multi-challenge runs and 1 for single-challenge runs.
-
-Default runtime limits are 12 rounds per challenge, 3 rounds per controller
-visit, 7200 seconds overall, and 7200 seconds per ClaudeCode call. Native Task
-subagents run inside that primary ClaudeCode session and share the same call
-limit.
-Override them with `AIXCTF_MAX_ROUNDS`, `AIXCTF_MAX_ROUNDS_PER_VISIT`,
-`AIXCTF_MAX_SECONDS`, and `AIXCTF_MAX_CMD_SECONDS`.
-
-Syntax-check Python modules:
+Syntax-check the runtime:
 
 ```bash
 python3 -m compileall .claude
 ```
 
-Render diagrams locally:
+Run two bounded rounds without invoking Claude Code or writing generated files
+into the repository:
 
 ```bash
-plantuml -tpng docs/architecture/diagrams/*.puml
+WORKDIR=/tmp/aixctf-ws \
+OUTPUT_DIR=/tmp/aixctf-out \
+CHALLENGE_DIR=. \
+CHALLENGE_ID=local-smoke \
+AIXCTF_CHALLENGE_MODE=single \
+AIXCTF_DRY_RUN=1 \
+AIXCTF_MAX_ROUNDS=2 \
+AIXCTF_MAX_ROUNDS_PER_VISIT=1 \
+python3 .claude/entrypoint.py
 ```
 
-## Outputs
+The expected dry-run result is `failed` with
+`failure_reason: dry_run_no_solver`. That status confirms the controller and
+artifact pipeline ran without pretending a solver was present.
 
-The runtime writes:
+Build the runtime image:
 
-- `$WORKDIR/state.json`
-- `$WORKDIR/rounds/*.json`
-- `$WORKDIR/events/*.json`
-- `$WORKDIR/progress.jsonl`
-- `$WORKDIR/status.json`
-- `$WORKDIR/handoff.md`
-- `$WORKDIR/result.json`
-- `/output/<challenge_id>/result.json` for each challenge in multi-challenge mode
-- `/output/result.json` as the single-challenge result or multi-challenge controller summary
+```bash
+docker build -t aixctf-agent .claude
+```
 
-Solved results require an exact flag plus evidence. Failed results require a handoff and failure reason.
+For a real challenge run, mount or point `CHALLENGE_DIR` at the challenge input,
+set a writable workspace and output directory, authenticate Claude Code through
+its supported environment, and set `AIXCTF_DRY_RUN=0`.
+
+## Durable state and outputs
+
+Each challenge workspace contains runtime-owned artifacts such as:
+
+```text
+$WORKDIR/
+  challenge/
+  rounds/*.json
+  events/*.json
+  evidence/
+  state.json
+  progress.jsonl
+  status.json
+  notes.md
+  handoff.md
+  result.json
+```
+
+In multi-challenge mode, state is isolated under one workspace per challenge.
+The controller writes individual challenge results plus a controller summary.
+
+## Architecture
+
+The implementation lives under `.claude/`:
+
+```text
+.claude/
+  entrypoint.py   runtime entrypoint
+  runner/         controller, scheduler, rounds, state, and results
+  hooks/          deterministic tool checkpoints and guards
+  sync/           fail-open human progress synchronization
+  templates/      category and bounded subtask prompts
+  docs/           routed tactical knowledge cards
+  tools/          pwn and web triage helpers
+```
+
+Start with the [architecture index](arch.md), or read these focused documents:
+
+- [Architecture overview](docs/architecture/01-overview.md)
+- [AutoResearch loop](docs/architecture/02-autoresearch-loop.md)
+- [Runtime components](docs/architecture/03-runtime-components.md)
+- [State, artifacts, and results](docs/architecture/04-state-artifacts-results.md)
+- [Subagents and handoff](docs/architecture/05-subagents-and-handoff.md)
+- [Hooks, progress, and human sync](docs/architecture/06-hooks-progress-sync.md)
+- [Knowledge library and prompts](docs/architecture/07-knowledge-library-prompts.md)
+- [Build and acceptance criteria](docs/architecture/08-build-mvp-acceptance.md)
+- [Architecture diagrams](docs/architecture/diagrams/README.md)
+
+## Current limitations
+
+- No independent flag verifier exists yet.
+- Hooks are checkpoint controls and guardrails, not a complete security boundary.
+- State is persisted, but updates do not yet provide full transactional or
+  event-sourced recovery semantics.
+- No public benchmark or solve-rate claim has been published.
+- The Docker dependency chain needs stronger version and checksum pinning for
+  reproducible builds.
+
+## Contributing
+
+Technical feedback and focused contributions are welcome, especially around
+verifiers, sandbox hardening, runtime reliability, challenge adapters,
+benchmarking, scheduler policies, result schemas, and tactical knowledge cards.
+
+Please keep runtime changes inside `.claude/`, preserve challenge scope checks,
+and include the validation commands and security impact in pull requests.
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE).
