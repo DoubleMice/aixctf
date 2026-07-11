@@ -1,0 +1,49 @@
+@startuml
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+title Execution Checkpoint and Interruption Recovery
+
+participant "Runtime" as Runtime
+participant "Progress\nLedger" as Progress
+participant "Claude Code\nExecution" as Claude
+participant "Hooks" as Hooks
+database "state.json" as State
+collections "handoff.md" as Handoff
+collections "Durable\nArtifacts" as Artifacts
+
+== Normal checkpoint ==
+Runtime -> Progress : execution_started
+Runtime -> Claude : fresh process(state + handoff)
+Claude -> Artifacts : logs, scripts, evidence, events
+Claude -> Handoff : update semantic state
+Claude -> Hooks : Stop
+Hooks --> Claude : allow (mtime is fresh)
+Claude --> Runtime : structured state output
+Runtime -> State : merge state
+Runtime -> Progress : execution_completed(complete)
+
+== Context pressure ==
+Claude -> Hooks : PreCompact(auto)
+Hooks --> Claude : block compaction;\nrequest handoff checkpoint
+Claude -> Handoff : update semantic state
+Claude --> Runtime : structured state output
+
+== Unexpected interruption ==
+Claude -x Runtime : crash, timeout, or API failure
+note over Progress
+  execution_started has no matching completion
+end note
+Runtime -> Progress : detect unfinished Execution
+Runtime -> Claude : start fresh recovery Execution
+Claude -> State : read machine state
+Claude -> Handoff : read potentially stale semantics
+Claude -> Artifacts : inspect newer durable observations
+Claude -> Handoff : reconcile and update
+Claude --> Runtime : recovered state output
+Runtime -> State : merge recovered state
+Runtime -> Progress : execution_completed(complete)
+
+@enduml

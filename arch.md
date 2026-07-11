@@ -8,7 +8,7 @@ Start here:
 - [AutoResearch Loop](docs/architecture/02-autoresearch-loop.md)
 - [Runtime Components](docs/architecture/03-runtime-components.md)
 - [State, Artifacts, and Results](docs/architecture/04-state-artifacts-results.md)
-- [Subagents and Handoff](docs/architecture/05-subagents-and-handoff.md)
+- [Execution and Handoff Protocols](docs/architecture/05-subagents-and-handoff.md)
 - [Hooks, Progress, and Human Sync](docs/architecture/06-hooks-progress-sync.md)
 - [Knowledge Library and Prompts](docs/architecture/07-knowledge-library-prompts.md)
 - [Build, MVP Plan, and Acceptance](docs/architecture/08-build-mvp-acceptance.md)

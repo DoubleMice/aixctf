@@ -2,7 +2,8 @@
 
 ## When to Use
 
-Use when another agent resumes the challenge.
+Use when a fresh Execution resumes the challenge from durable state. Do not
+depend on a previous Claude Code session ID.
 
 ## Quick Checks
 
@@ -14,4 +15,6 @@ cat "$WORKDIR/handoff.md"
 
 ## Next Action
 
-Trust artifacts over prose, then run the smallest command that validates the next hypothesis.
+Treat `state.json` as machine state and `handoff.md` as model-maintained semantic
+state. Trust artifacts over unsupported prose. If newer artifacts exist after an
+interruption, reconcile and update handoff before continuing tactical work.

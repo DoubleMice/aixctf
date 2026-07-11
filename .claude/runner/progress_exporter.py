@@ -28,6 +28,7 @@ class ProgressExporter:
         category: str = "unknown",
         artifacts: list[str] | None = None,
         extra: dict[str, Any] | None = None,
+        console: bool = True,
     ) -> dict[str, Any]:
         payload = {
             "time": datetime.now(timezone.utc).isoformat(),
@@ -54,8 +55,9 @@ class ProgressExporter:
             f"[AIXCTF][{payload['level']}] round={round_id} phase={phase} "
             f"category={category} event={event} msg={json.dumps(message, ensure_ascii=False)}"
         )
-        try:
-            print(line, file=sys.stdout, flush=True)
-        except OSError:
-            pass
+        if console:
+            try:
+                print(line, file=sys.stdout, flush=True)
+            except OSError:
+                pass
         return payload

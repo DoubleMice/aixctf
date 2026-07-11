@@ -8,7 +8,7 @@ This directory contains the split version of the AIxCTF ClaudeCode AutoResearch 
 2. [AutoResearch Loop](02-autoresearch-loop.md) defines the outer controller loop, parallel challenge visits, and per-challenge round model.
 3. [Runtime Components](03-runtime-components.md) maps each component to implementation responsibilities.
 4. [State, Artifacts, and Results](04-state-artifacts-results.md) defines durable runtime outputs.
-5. [Subagents and Handoff](05-subagents-and-handoff.md) explains bounded subtask execution.
+5. [Execution and Handoff Protocols](05-subagents-and-handoff.md) defines fresh-Execution recovery and bounded Task handoff.
 6. [Hooks, Progress, and Human Sync](06-hooks-progress-sync.md) explains checkpointing and human-visible progress.
 7. [Knowledge Library and Prompts](07-knowledge-library-prompts.md) explains prompt and document injection.
 8. [Build, MVP Plan, and Acceptance](08-build-mvp-acceptance.md) captures delivery phases and validation.

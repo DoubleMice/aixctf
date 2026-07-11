@@ -9,6 +9,7 @@ from typing import Any
 
 
 DEFAULT_STATE: dict[str, Any] = {
+    "handoff_protocol_version": "aixctf.challenge-handoff/v1",
     "challenge_id": "unknown",
     "category": "unknown",
     "phase": "init",

@@ -37,7 +37,11 @@ Coordinates the round-level AutoResearch flow:
 
 `runner/round_manager.py`
 
-Builds the round prompt, injects selected knowledge, calls ClaudeCode, collects tool and native Task events, writes `rounds/round_XXX.json`, updates notes/handoff, and flushes human sync.
+Builds the round prompt, injects state, handoff, and selected knowledge, calls
+ClaudeCode, collects tool and native Task events, writes
+`rounds/round_XXX.json`, updates notes, and flushes human sync. In real mode the
+model owns handoff research content; the runtime renderer is only a dry-run or
+missing-file fallback.
 Before merging the round result, it reloads the latest `state.json` so hook
 updates produced during the ClaudeCode run are preserved.
 
@@ -48,6 +52,8 @@ updates produced during the ClaudeCode run are preserved.
 Runs ClaudeCode in real mode or dry-run mode. It stores stdout/stderr under `logs/` and lets dry-run validate the runtime without external model calls.
 Each active challenge visit owns one ClaudeCode child process with isolated
 `WORKDIR`, `CHALLENGE_DIR`, and `AIXCTF_ROUND_ID` environment values.
+Each call also receives an `AIXCTF_EXECUTION_ID` and nanosecond start time so
+hooks can gate a normal Stop without hashing handoff content.
 
 ## State, Event, and Result Stores
 

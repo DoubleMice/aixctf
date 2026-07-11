@@ -7,6 +7,13 @@ from typing import Any
 
 from runner.claude_runner import ClaudeRunner
 from runner.event_store import EventStore, event_action
+from runner.execution_lifecycle import (
+    CHALLENGE_HANDOFF_PROTOCOL,
+    handoff_for_prompt,
+    handoff_updated_since,
+    new_execution,
+    recovery_notice,
+)
 from runner.feedback_loop import classify_failure
 from runner.knowledge_router import KnowledgeRouter
 from runner.loop_core import LoopCore
@@ -40,11 +47,22 @@ class RoundManager:
         runtime_limits: dict[str, Any],
         dry_run: bool,
     ) -> dict[str, Any]:
+        recovery = recovery_notice(self.workspace)
+        execution = new_execution(round_id)
         loop_plan = self.loop_core.prepare_round(state, round_id)
         state = dict(state)
         state.setdefault("research_loop", {})["active_strategy"] = loop_plan["active_strategy"]
         selected_docs = self.knowledge_router.select(state)
         selected_template = selected_docs["templates"][0]
+        self.progress.emit(
+            level="info",
+            event="execution_started",
+            message=f"Execution {execution['execution_id']} started.",
+            round_id=round_id,
+            phase=state.get("phase", "init"),
+            category=state.get("category", "unknown"),
+            extra=execution,
+        )
         self.progress.emit(
             level="info",
             event="knowledge_selected",
@@ -62,14 +80,25 @@ class RoundManager:
             message=f"Round {round_id} started.",
             summary={"selected_docs": selected_docs},
         )
-        prompt = self.build_prompt(round_id, state, challenge_context, selected_docs, loop_plan)
-        claude_result = self.claude_runner.run(round_id, prompt, int(runtime_limits.get("max_command_seconds", 7200)), dry_run)
+        prompt = self.build_prompt(round_id, state, challenge_context, selected_docs, loop_plan, recovery)
+        claude_result = self.claude_runner.run(
+            round_id,
+            prompt,
+            int(runtime_limits.get("max_command_seconds", 7200)),
+            dry_run,
+            execution,
+        )
         events = self.event_store.collect(round_id)
         subtasks = native_task_results_from_events(events)
         round_result = self.summarize(round_id, state, claude_result, events, selected_docs, loop_plan, subtasks)
         self.write_round_result(round_result)
         self.update_notes(round_result)
-        self.update_handoff(state, challenge_context, round_result)
+        if dry_run:
+            self.update_handoff(state, challenge_context, round_result)
+        execution["checkpoint_status"] = "complete" if handoff_updated_since(
+            self.workspace, int(execution["started_at_ns"])
+        ) else "incomplete"
+        round_result["execution"] = execution
         self.sync_queue.emit_simple(
             source="round_manager",
             event_type="round_end",
@@ -106,6 +135,7 @@ class RoundManager:
         challenge_context: dict[str, Any],
         selected_docs: dict[str, list[str]],
         loop_plan: dict[str, Any],
+        recovery: str = "",
     ) -> str:
         selected_template = selected_docs["templates"][0]
         template_content = self.knowledge_router.read_doc_excerpt(selected_template)
@@ -115,6 +145,8 @@ class RoundManager:
             if group != "templates"
         }
         research = state.get("research_loop", {})
+        current_handoff = handoff_for_prompt(self.workspace)
+        recovery_section = recovery or "No interrupted or incomplete prior Execution was detected."
         return f"""# Round {round_id:03d} Input
 
 ## Current State
@@ -122,6 +154,16 @@ class RoundManager:
 ```json
 {json.dumps(state, ensure_ascii=False, indent=2)}
 ```
+
+## Current Handoff
+
+Protocol: `{CHALLENGE_HANDOFF_PROTOCOL}`
+
+{current_handoff}
+
+## Recovery Check
+
+{recovery_section}
 
 ## Challenge Context
 
@@ -200,12 +242,20 @@ files. Ask the Task to return a compact JSON object with:
 
 ## Required Round Output
 
-Before stopping this round, update these files under the workspace root:
+This Execution may run multiple closely related experiments. Choose a semantic
+checkpoint before stopping rather than ending after an arbitrary small action.
+
+Before stopping, update these files under the workspace root:
 
 - `notes.md`
 - `handoff.md`
 - `scripts/` if needed
 - `evidence/` if success evidence exists
+
+`handoff.md` is model-owned semantic state for the next fresh Execution. Record
+the current understanding, important relationships, evidence references, failed
+paths, and the next execution intent. The runtime will not rewrite its research
+content in real mode.
 
 Do not write runtime-owned files or directories such as `state.json`, `result.json`,
 `status.json`, `progress.jsonl`, `rounds/`, `events/`, `sync/`, or `.claude/`.
@@ -260,6 +310,7 @@ Then end with a JSON object containing:
         observations = parsed.get("observations") or default_observations(claude_result)
         loop = self.reflection_engine.build_loop(state, parsed, observations, artifacts)
         round_result = {
+            "handoff_protocol_version": CHALLENGE_HANDOFF_PROTOCOL,
             "round": round_id,
             "category": parsed.get("category") or state.get("category", "unknown"),
             "status": status,

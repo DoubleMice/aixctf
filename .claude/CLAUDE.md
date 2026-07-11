@@ -13,7 +13,7 @@ Important paths:
 - `$WORKDIR/logs`: command logs
 - `$WORKDIR/evidence`: successful transcripts
 - `$WORKDIR/sync`: human sync events and logs
-- `$WORKDIR/handoff.md`: takeover summary
+- `$WORKDIR/handoff.md`: model-maintained semantic state for the next fresh Execution
 - `$WORKDIR/result.json`: final output
 
 ClaudeCode current working directory is the active challenge workspace root. The
@@ -21,6 +21,13 @@ RuntimeController may switch to another challenge after this round; use durable
 files under the current `$WORKDIR` so the next visit can resume. Use relative
 paths such as `challenge/`, `notes.md`, `logs/`, and `handoff.md` unless an
 absolute path is required.
+
+At the start of every Execution, read both `state.json` and `handoff.md`. If the
+runtime reports an interrupted or incomplete prior Execution, reconcile the
+handoff with newer events, logs, scripts, and evidence before continuing. Before
+stopping normally, update `handoff.md`; a Stop hook may keep the Execution alive
+once if no update was made. The runtime owns `state.json`, while the model owns
+the research meaning recorded in `handoff.md`.
 
 Modify only files under the workspace root unless the runtime explicitly asks for agent code changes.
 Runtime-owned files are read-only for the agent: `state.json`, `result.json`,

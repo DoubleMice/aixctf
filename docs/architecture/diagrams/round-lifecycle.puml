@@ -4,44 +4,40 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam defaultFontName Arial
 
-title Round-Based AutoResearch Lifecycle
+title State-Driven AutoResearch Execution
 
 participant "Runtime\nController" as Runtime
-participant "Loop Core" as Loop
-participant "Knowledge\nRouter" as Knowledge
 participant "Round\nManager" as Round
-participant "ClaudeCode\nChild Process" as Claude
+database "state.json" as State
+collections "handoff.md" as Handoff
+participant "Claude Code\nFresh Execution" as Claude
 participant "Hooks" as Hooks
-participant "State Store" as State
-participant "Human Sync\nAgent" as Sync
-participant "Result\nCollector" as Result
+participant "Progress\nLedger" as Progress
 
-Runtime -> State : load_or_create state.json
-Runtime -> Loop : prepare_round(state)
-Loop -> Loop : select strategy
-Loop -> Knowledge : select docs
-Knowledge --> Loop : template + skill/tool/debug docs
-Loop --> Runtime : loop_plan
+Runtime -> State : load machine state
+Round -> Progress : execution_started(id, time)
+Round -> Handoff : read semantic state
+Round -> Claude : prompt(state + handoff + docs)
 
-Runtime -> Round : run_round(loop_plan)
-Round -> Claude : prompt(state, docs)\nwith child WORKDIR
-Claude -> Hooks : PreToolUse
-Hooks --> Claude : allow / deny
-Claude -> Hooks : PostToolUse
-Hooks -> State : candidate flags /\nevidence / failures
-Hooks --> Round : tool events
-Claude -> Hooks : native Task events
-Hooks --> Round : task result artifacts
-Round -> Round : reflect observation and evidence
-Round -> State : reload latest state.json
-Round -> State : apply round_result\nwithout losing hook updates
-Round -> Sync : flush round summary
-Runtime -> Runtime : terminal condition?
-
-alt solved or terminal condition reached
-  Runtime -> Result : write result.json
-else continue
-  Runtime -> Loop : next round
+loop strongly related experiments
+  Claude -> Hooks : PreToolUse / PostToolUse
+  Hooks -> State : flags, evidence indexes, signals
+  Hooks --> Claude : allow, deny, observation
 end
+
+Claude -> Handoff : update next Execution state
+Claude -> Hooks : Stop
+alt handoff updated after Execution start
+  Hooks --> Claude : allow Stop
+else first stale handoff
+  Hooks --> Claude : block once; request checkpoint
+  Claude -> Handoff : externalize semantic state
+  Claude -> Hooks : Stop again
+  Hooks --> Claude : allow Stop
+end
+
+Claude --> Round : structured state output
+Round -> State : reload and apply result
+Runtime -> Progress : execution_completed(checkpoint status)
 
 @enduml

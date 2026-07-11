@@ -44,6 +44,8 @@ Each round should inject a small, relevant set:
 Round prompts include:
 
 - current `state.json`
+- current model-maintained `handoff.md`
+- an interruption/reconciliation notice when the prior Execution is incomplete
 - challenge context
 - allowed scope
 - current research loop
@@ -53,4 +55,7 @@ Round prompts include:
 - native Task delegation contract
 - required structured JSON output
 
-The required output must include research question, hypothesis, experiment, observations, evidence, conclusion, state delta, flags, failure reason, next experiment, and do-not-repeat items.
+The model may run multiple closely related experiments inside one Execution. At
+a semantic checkpoint it updates `handoff.md`, then returns the structured
+research question, hypothesis, experiment, observations, evidence, conclusion,
+state delta, flags, failure reason, next experiment, and do-not-repeat items.

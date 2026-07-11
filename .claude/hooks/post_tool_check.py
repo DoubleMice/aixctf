@@ -10,6 +10,7 @@ from hooks.hook_io import command_from_payload, is_native_task_tool, tool_input,
 from runner.event_store import EventStore, signals_from_text
 from runner.paths import workspace_root
 from runner.state_store import StateStore, append_unique
+from runner.execution_lifecycle import TASK_HANDOFF_PROTOCOL
 from sync.sync_queue import SyncQueue
 from tools.flag_utils import extract_flags, redact_flags
 
@@ -201,6 +202,7 @@ def normalize_task_result(task_id: str, input_data: dict[str, Any], parsed: dict
     status = raw_status if raw_status in {"confirmed", "falsified", "inconclusive", "blocked"} else "inconclusive"
     conclusion = parsed.get("conclusion") or first_nonempty_line(stdout) or first_nonempty_line(stderr) or "Native Task completed without a parseable conclusion."
     return {
+        "protocol_version": TASK_HANDOFF_PROTOCOL,
         "subtask_id": task_id,
         "type": "claudecode_native_task",
         "agent_type": input_data.get("subagent_type") or input_data.get("agent_type") or input_data.get("type") or "general-purpose",
@@ -232,6 +234,8 @@ def list_value(value: Any) -> list[Any]:
 
 def render_task_handoff(input_data: dict[str, Any], result: dict[str, Any]) -> str:
     return f"""# Native Task Handoff
+
+Protocol: `{TASK_HANDOFF_PROTOCOL}`
 
 ## Description
 

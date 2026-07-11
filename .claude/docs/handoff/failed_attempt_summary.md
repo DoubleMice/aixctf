@@ -12,3 +12,6 @@ Use when a hypothesis failed or no progress was made.
 - Conclusion.
 - Do not repeat.
 - Next strategy.
+
+Record these in `handoff.md` before a normal Stop so the next fresh Execution
+does not need the previous conversation context.

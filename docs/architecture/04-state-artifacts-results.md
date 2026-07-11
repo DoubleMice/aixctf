@@ -38,6 +38,25 @@ $WORKDIR/
 - `scheduler`: pending/active/paused/solved/exhausted status and pause reason
 - runtime limit status
 - sync status
+- `handoff_protocol_version`, currently `aixctf.challenge-handoff/v1`
+
+`state.json` is the machine-readable state used by the controller. It does not
+replace `handoff.md`: JSON carries deterministic control and evidence indexes,
+while the handoff carries the model's semantic understanding and next execution
+intent.
+
+## handoff.md
+
+`handoff.md` is read at the start of every fresh Execution and maintained by the
+model. In real mode the runtime does not rewrite its research content. It should
+remain a compact execution state rather than a transcript: current understanding,
+important relationships, evidence references, failed paths, and what the next
+Execution should do.
+
+Normal Stop requires the file to have been modified after the current Execution
+started. This uses filesystem modification time only; there is no content hash or
+cross-file transaction. If an Execution is interrupted, `state.json` remains the
+machine state and the next model reconciles the handoff with newer artifacts.
 
 ## round_result.json
 
@@ -83,3 +102,8 @@ finishes.
 Within a single challenge, hooks may update `state.json` before the primary
 ClaudeCode response returns. The round merge reloads that latest state first,
 then applies the model-produced `round_result` so hook evidence is retained.
+
+`progress.jsonl` records `execution_started` and `execution_completed`. An
+unmatched start or a completion with `checkpoint_status: incomplete` causes the
+next prompt to include recovery instructions; it does not create a separate
+session-resume or recovery state machine.

@@ -20,7 +20,9 @@ def main(argv: list[str]) -> int:
     from hooks.hook_io import posttool_context, pretool_allow, pretool_deny, read_hook_input, stop_allow, stop_block, write_json
     from hooks.post_tool_check import check as post_check
     from hooks.pre_tool_check import check as pre_check
+    from runner.execution_lifecycle import handoff_updated_since
     from runner.paths import workspace_root
+    from runner.progress_exporter import ProgressExporter
     from runner.state_store import StateStore
     from sync.sync_queue import SyncQueue
 
@@ -45,6 +47,30 @@ def main(argv: list[str]) -> int:
     if mode == "stop":
         workspace = workspace_root()
         state = StateStore(workspace).load_or_create()
+        execution_id = os.environ.get("AIXCTF_EXECUTION_ID") or str(payload.get("session_id") or "unknown")
+        started_at_ns = safe_int(os.environ.get("AIXCTF_EXECUTION_STARTED_AT_NS"), 0)
+        checkpoint_ready = handoff_updated_since(workspace, started_at_ns)
+        stop_hook_active = bool(payload.get("stop_hook_active"))
+        if not checkpoint_ready:
+            progress = ProgressExporter(workspace)
+            progress.emit(
+                level="warning",
+                event="checkpoint_incomplete" if stop_hook_active else "checkpoint_requested",
+                message="handoff.md was not updated during the current Execution.",
+                round_id=safe_int(state.get("round", 0), 0) + 1,
+                phase=state.get("phase", "unknown"),
+                category=state.get("category", "unknown"),
+                extra={"execution_id": execution_id, "started_at_ns": started_at_ns},
+                console=False,
+            )
+            if not stop_hook_active:
+                write_json(
+                    stop_block(
+                        "Before stopping, update handoff.md with the current research state, evidence references, "
+                        "failed paths, and next execution intent, then return the required state JSON."
+                    )
+                )
+                return 0
         guard = validate_final_state(workspace, state, final=False)
         SyncQueue(workspace).emit_simple(
             source="hook",
@@ -63,7 +89,29 @@ def main(argv: list[str]) -> int:
             write_json(stop_allow(guard["reason"]))
         return 0
 
-    sys.stderr.write("usage: hook_entrypoint.py pre_tool|post_tool|stop\n")
+    if mode == "pre_compact":
+        workspace = workspace_root()
+        state = StateStore(workspace).load_or_create()
+        execution_id = os.environ.get("AIXCTF_EXECUTION_ID") or str(payload.get("session_id") or "unknown")
+        ProgressExporter(workspace).emit(
+            level="warning",
+            event="precompact_checkpoint_requested",
+            message="Automatic context compaction was blocked so the model can externalize state first.",
+            round_id=safe_int(state.get("round", 0), 0) + 1,
+            phase=state.get("phase", "unknown"),
+            category=state.get("category", "unknown"),
+            extra={"execution_id": execution_id, "trigger": payload.get("trigger")},
+            console=False,
+        )
+        write_json(
+            stop_block(
+                "Do not compact this strongly related task. Update handoff.md, return the required state JSON, "
+                "and end this Execution so the runtime can start a fresh one from durable state."
+            )
+        )
+        return 0
+
+    sys.stderr.write("usage: hook_entrypoint.py pre_tool|post_tool|stop|pre_compact\n")
     return 2
 
 
@@ -81,7 +129,7 @@ def fail_open(argv: list[str], exc: Exception) -> int:
         }
     elif mode == "post_tool":
         payload = {"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": reason}}
-    elif mode == "stop":
+    elif mode in {"stop", "pre_compact"}:
         payload = {}
     else:
         payload = {"error": reason}

@@ -22,7 +22,14 @@ class ClaudeRunner:
         except OSError as exc:
             self.init_warning = str(exc)
 
-    def run(self, round_id: int, prompt: str, timeout_seconds: int, dry_run: bool) -> dict[str, Any]:
+    def run(
+        self,
+        round_id: int,
+        prompt: str,
+        timeout_seconds: int,
+        dry_run: bool,
+        execution: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         prompt_path = self.prompts_dir / f"round_{round_id:03d}.md"
         try:
             prompt_path.parent.mkdir(parents=True, exist_ok=True)
@@ -38,7 +45,7 @@ class ClaudeRunner:
             }
         if dry_run:
             return self._dry_run(round_id, prompt_path)
-        return self._real_run(round_id, prompt_path, timeout_seconds)
+        return self._real_run(round_id, prompt_path, timeout_seconds, execution or {})
 
     def _dry_run(self, round_id: int, prompt_path: Path) -> dict[str, Any]:
         stdout = {
@@ -62,7 +69,7 @@ class ClaudeRunner:
             return {"mode": "dry-run", "exit_code": 0, "stdout": json.dumps(stdout), "stderr": str(exc), "log_path": "", "log_write_warning": True}
         return {"mode": "dry-run", "exit_code": 0, "stdout": json.dumps(stdout), "stderr": "", "log_path": str(log_path)}
 
-    def _real_run(self, round_id: int, prompt_path: Path, timeout_seconds: int) -> dict[str, Any]:
+    def _real_run(self, round_id: int, prompt_path: Path, timeout_seconds: int, execution: dict[str, Any]) -> dict[str, Any]:
         log_path = self.logs_dir / f"claude_round_{round_id:03d}.log"
         err_path = self.logs_dir / f"claude_round_{round_id:03d}.err.log"
         command = os.environ.get("CLAUDE_CODE_CMD", "claude -p")
@@ -85,6 +92,8 @@ class ClaudeRunner:
         env["WORKDIR"] = str(self.workspace)
         env["CHALLENGE_DIR"] = str(self.workspace / "challenge")
         env["AIXCTF_ROUND_ID"] = str(round_id)
+        env["AIXCTF_EXECUTION_ID"] = str(execution.get("execution_id") or "")
+        env["AIXCTF_EXECUTION_STARTED_AT_NS"] = str(execution.get("started_at_ns") or 0)
         try:
             proc = subprocess.run(
                 args,

@@ -1,6 +1,10 @@
 # AutoResearch Loop
 
-The runtime solves challenges through repeated, bounded experiments. A round is not "ask ClaudeCode for the flag"; it is an observable research step with a hypothesis, experiment, evidence, and state delta.
+The runtime solves challenges through bounded, semantically coherent Executions.
+An Execution is not "ask ClaudeCode for the flag" and need not stop after one
+small experiment. The model may keep closely related tool calls, native Tasks,
+debugging, and validation together, then externalize the state required by the
+next fresh Execution.
 
 ## Controller Loop
 
@@ -31,8 +35,8 @@ not share ClaudeCode context across challenges.
 ## State Transition
 
 ```text
-S_n + C + K_n
-  -> AutoResearch / AutoExploit Round
+S_n + H_n + C + K_n
+  -> AutoResearch / AutoExploit Execution
   -> Tool Events
   -> Hook Evaluation
   -> Subtask Handoff Collection
@@ -43,6 +47,7 @@ S_n + C + K_n
 ```
 
 - `S_n`: current `state.json`
+- `H_n`: current model-maintained `handoff.md`
 - `C`: challenge context, target, scope, and metadata
 - `K_n`: selected template, skill, tool, debug, and handoff docs
 - `Events`: tool, hook, sync, and subtask events
@@ -52,9 +57,21 @@ the runtime reloads the latest state before applying `round_result`, so
 candidate flags, evidence paths, failure signals, and subtask artifacts written
 by hooks are not overwritten by the pre-round state snapshot.
 
-## Round Contract
+## Disposable Execution
 
-Each round must answer:
+Each call uses a fresh `claude -p` process. Correctness does not depend on a
+session ID or hidden conversation context surviving. An Execution becomes safe
+to discard after it has updated `handoff.md`, returned its structured state
+output, and the runtime has merged the result into durable state.
+
+Normal Stop and automatic PreCompact hooks request this checkpoint. If a process
+ends unexpectedly, the next fresh Execution receives an interruption notice and
+reconciles the last JSON state and handoff with newer durable artifacts.
+
+## Execution Output Contract
+
+Each Execution must eventually answer these fields, but the model chooses the
+semantic checkpoint and may run multiple related experiments before doing so:
 
 - Research question: what question is this round answering?
 - Hypothesis: what does the agent believe may be true?

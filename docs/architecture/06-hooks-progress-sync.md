@@ -25,8 +25,20 @@ multiple ClaudeCode instances are active.
 
 `Stop`:
 
+- require `handoff.md` to be updated during the current Execution
+- block once with checkpoint instructions when it is stale
+- allow a second stop attempt and record `checkpoint_incomplete` to avoid loops
 - run evidence guard checks
 - emit `round_checkpoint` or `evidence_guard_failed`
+
+`PreCompact` (`auto` only):
+
+- block automatic context compaction
+- ask the model to externalize handoff and structured state before ending
+- emit `precompact_checkpoint_requested`
+
+PreCompact is best-effort. If a context-limit error already prevents the model
+from responding, the next fresh Execution recovers from existing durable files.
 
 ## Progress Export
 
@@ -36,6 +48,10 @@ The Docker image cannot assume external dashboards. Progress therefore uses:
 - `$WORKDIR/progress.jsonl`
 - `$WORKDIR/status.json`
 - `$WORKDIR/handoff.md`
+
+`progress.jsonl` also carries `execution_started` and `execution_completed`
+records keyed by `execution_id`. Hook stdout must remain valid hook JSON, so
+hook-originated progress records are written without console output.
 
 Stdout must stay concise. Large outputs go to `logs/`.
 

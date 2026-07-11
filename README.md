@@ -17,6 +17,12 @@ restartable executors. Research state lives outside the model context in files
 owned by the runtime. The executor may stop, time out, or be replaced without
 making its chat history the only record of the research.
 
+Each fresh Execution reads both machine state (`state.json`) and model-maintained
+semantic state (`handoff.md`). Normal Stop and automatic context-compaction
+checkpoints ask the model to externalize that state; after an interruption, the
+next Execution reconciles it with durable artifacts instead of resuming hidden
+conversation context.
+
 > Context is not memory. Durable state is memory.
 
 AIxCTF is an early CTF AutoResearch implementation. It is not a benchmark
@@ -150,7 +156,7 @@ Start with the [architecture index](arch.md), or read these focused documents:
 - [AutoResearch loop](docs/architecture/02-autoresearch-loop.md)
 - [Runtime components](docs/architecture/03-runtime-components.md)
 - [State, artifacts, and results](docs/architecture/04-state-artifacts-results.md)
-- [Subagents and handoff](docs/architecture/05-subagents-and-handoff.md)
+- [Execution and handoff protocols](docs/architecture/05-subagents-and-handoff.md)
 - [Hooks, progress, and human sync](docs/architecture/06-hooks-progress-sync.md)
 - [Knowledge library and prompts](docs/architecture/07-knowledge-library-prompts.md)
 - [Build and acceptance criteria](docs/architecture/08-build-mvp-acceptance.md)

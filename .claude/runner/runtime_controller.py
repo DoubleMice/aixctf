@@ -188,6 +188,22 @@ class RuntimeController:
             state = state_store.load_or_create(initial_state)
             state = state_store.apply_round_result(state, round_result)
             status_writer.write(state, "round_end", round_result.get("loop", {}).get("conclusion", "round ended"))
+            execution = round_result.get("execution") or {}
+            if execution.get("execution_id"):
+                checkpoint_status = execution.get("checkpoint_status") or "incomplete"
+                progress.emit(
+                    level="info" if checkpoint_status == "complete" else "warning",
+                    event="execution_completed",
+                    message=f"Execution {execution['execution_id']} completed with checkpoint {checkpoint_status}.",
+                    round_id=round_id,
+                    phase=state.get("phase", "unknown"),
+                    category=state.get("category", "unknown"),
+                    extra={
+                        "execution_id": execution["execution_id"],
+                        "started_at_ns": execution.get("started_at_ns"),
+                        "checkpoint_status": checkpoint_status,
+                    },
+                )
 
         pause_reason = pause_reason or self.pause_reason_for_state(state, visit_start_round)
         scheduler_status = "solved" if state.get("solved") and state.get("confirmed_flag") else "paused"

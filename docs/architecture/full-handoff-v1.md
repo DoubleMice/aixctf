@@ -76,8 +76,8 @@ RuntimeController outer loop
 `WORKDIR`，不共享 ClaudeCode 上下文。
 
 ```text
-S_n + C + K_n
-  -> AutoResearch / AutoExploit Round
+S_n + H_n + C + K_n
+  -> AutoResearch / AutoExploit Execution
   -> ClaudeCode Primary Agent
   -> Tool Events
   -> Hook Evaluation
@@ -91,12 +91,15 @@ S_n + C + K_n
 含义：
 
 - `S_n`: 当前 `state.json`
+- `H_n`: 当前由模型维护的 `handoff.md`
 - `C`: challenge context，包括题面、附件、target、scope、metadata
 - `K_n`: 本轮注入的 template / skill / tool / debug / handoff docs
 - `Events`: 工具、hook、sync、subtask 事件
 - `S_{n+1}`: 由 round result 和 subtask result 合并后的下一状态
 
-设计规则：每一轮都必须外化 durable state，不能只依赖 ClaudeCode 对话上下文。hook
+设计规则：每次 Execution 都必须外化 durable state，不能只依赖 ClaudeCode 对话上下文。模型
+可以在同一次 Execution 内完成多个强关联实验，并在语义 checkpoint 更新 `handoff.md`。
+hook
 在 ClaudeCode 运行中写入的 `state.json` 是中间检查点；round 结束合并前必须重新读取
 最新状态，避免候选 flag、evidence、failure signals 或 subtask artifacts 被旧状态覆盖。
 
@@ -260,7 +263,8 @@ Hooks
 - 提取 native Task / Agent subtask result
 - 重新读取最新 `state.json` 后再合并 round result，保留 hook 中间状态
 - 写入 `rounds/round_XXX.json`
-- 更新 `notes.md` 和 `handoff.md`
+- 更新 `notes.md`；real mode 下保留模型维护的 `handoff.md`
+- 注入上一份 handoff 和 interrupted/incomplete Execution 恢复提示
 - flush Human Sync Agent
 
 ### Claude Runner
@@ -272,7 +276,7 @@ Hooks
 - dry-run 模式下生成结构化假结果
 - real 模式下调用 `CLAUDE_CODE_CMD`，默认 `claude -p`
 - 通过 stdin 传入 prompt，避免 CLI variadic 参数吞掉 prompt
-- 设置 child-process-local `WORKDIR`、`CHALLENGE_DIR` 和 `AIXCTF_ROUND_ID`
+- 设置 child-process-local `WORKDIR`、`CHALLENGE_DIR`、`AIXCTF_ROUND_ID`、`AIXCTF_EXECUTION_ID` 和 Execution 启动时间
 - 写入 `logs/claude_round_XXX.log` 和 `.err.log`
 
 ### State Store
@@ -419,6 +423,7 @@ $WORKDIR/subtasks/task_XXX/
 
 ```json
 {
+  "protocol_version": "aixctf.task-handoff/v1",
   "subtask_id": "task_001",
   "type": "claudecode_native_task",
   "agent_type": "general-purpose",
@@ -475,9 +480,18 @@ PreToolUse 对 native subagent 的约束：
 
 职责：
 
+- 使用 Execution 启动时间与 `handoff.md` mtime 检查本次是否更新
+- 首次未更新时阻止停止并要求模型形成 checkpoint
+- 第二次仍未更新时允许停止并记录 `checkpoint_incomplete`，避免 hook 死循环
 - 运行 evidence guard
 - 对未满足证据要求的 solved 状态进行阻断
 - 通过时返回空 JSON，避免 additionalContext 触发 ClaudeCode 继续生成
+
+### PreCompact
+
+只匹配自动压缩。它会阻止 compaction，并要求模型先更新 handoff、返回结构化状态、结束
+当前 Execution。若 context-limit error 已使本次调用失败，则下一次 fresh Execution 根据
+现有 JSON、handoff 和 durable artifacts 恢复。
 
 ---
 
@@ -487,6 +501,7 @@ PreToolUse 对 native subagent 的约束：
 
 ```json
 {
+  "handoff_protocol_version": "aixctf.challenge-handoff/v1",
   "challenge_id": "unknown",
   "category": "unknown",
   "phase": "init",
@@ -530,6 +545,11 @@ PreToolUse 对 native subagent 的约束：
   }
 }
 ```
+
+`state.json` 是 controller 使用的机器状态；`handoff.md` 是下一次 fresh Execution 读取的
+模型语义状态。系统不使用 handoff hash、checkpoint 目录或 session resume。正常结束通过
+Stop checkpoint 收口，意外中断通过 `progress.jsonl` 中未闭合的 Execution lifecycle 触发
+下一次模型 reconciliation。
 
 状态合并规则：
 
@@ -719,9 +739,10 @@ entrypoint.py
               -> native_task_results_from_events()
               -> ReflectionEngine.build_loop()
               -> write round result
-              -> update notes / handoff
+              -> update notes; preserve model-owned handoff
               -> HumanSyncAgent.flush_round()
           -> StateStore.apply_round_result()
+          -> emit execution_completed
       -> ResultCollector.write_result()
       -> ChallengeScheduler.update()
   -> controller result summary when multi-challenge
@@ -742,9 +763,10 @@ ClaudeCode primary agent
 当前实现的核心原则：
 
 ```text
-每一轮输入显式状态；
-每一轮执行可验证实验；
-每一轮写出 durable artifacts；
+每次 fresh Execution 输入显式 state 和 handoff；
+强关联实验可在一个 Execution 内连续完成；
+正常 Stop 前模型更新 handoff 并输出结构化状态；
+中断后从 JSON、handoff 和 durable artifacts 恢复；
 hooks 只做确定性检查、记录和轻量状态更新；
 native Task 用于局部 bounded 子任务；
 全局策略仍由 primary agent 和 StateStore 控制；
